@@ -1,0 +1,6 @@
+fonts/*.ttf
+__pycache__/
+*.pyc
+.env
+.DS_Store
+_sheet_*.png
