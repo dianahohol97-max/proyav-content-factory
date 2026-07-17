@@ -47,7 +47,10 @@ def build_carousels():
         # cover_photo / cta_photo); pool is only a fallback.
         photos = [_resolve(car.get("cover_photo"), pool, cur)]; cur += 1
         for item in car["slides"]:
-            nm = item[2] if len(item) > 2 else None
+            if isinstance(item, dict):
+                nm = item.get("photo")
+            else:
+                nm = item[2] if len(item) > 2 else None
             photos.append(_resolve(nm, pool, cur)); cur += 1
         cta_photo = _resolve(car.get("cta_photo"), pool, cur); cur += 1
         paths = R.carousel(car, out_dir, photos=photos, cta_photo=cta_photo)

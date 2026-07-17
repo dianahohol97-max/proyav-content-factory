@@ -335,6 +335,85 @@ def cta(car, out_path, photo=None):
     img.save(out_path, "PNG"); return out_path
 
 
+# --- extra templates (library for varied layouts) --------------------------
+def slide_quote(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
+    """Coal slide, oversized quote in «» — a scroll-stopping statement."""
+    img = Image.new("RGB", (W, H), COAL); d = ImageDraw.Draw(img)
+    maxw = W - MARGIN * 2
+    _pill(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}",
+          body(19, 700), ACC, WHITE)
+    f, lines = _fit_tokens(d, _tokens("«" + head + "»"), maxw, start=98, min_size=50, max_lines=4)
+    lh = int(f.size * 1.05)
+    y = (H - len(lines) * lh) // 2 - 40
+    y = _draw_tokens(d, MARGIN, y, lines, f, WHITE, ACC_D, lh)
+    if text:
+        y += 26
+        for l in wrap(d, text, body(30, 500), maxw - 140):
+            d.text((MARGIN, y), l, font=body(30, 500), fill=MUT_D); y += 42
+    _meta(d, "", f"{idx:02d} — {total:02d}", C.SWIPE_CUE, dark=True)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG"); return out_path
+
+
+def slide_uicard(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
+    """Paper slide with a headline, a centred framed image (screenshot/graphic),
+    and a caption — perfect for UI shots that must match the text."""
+    img = Image.new("RGB", (W, H), PAPER); d = ImageDraw.Draw(img)
+    maxw = W - MARGIN * 2
+    _pill(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}",
+          body(19, 700), INK, PAPER)
+    hf, hlines = _fit_tokens(d, _tokens(head), maxw, start=56, min_size=38, max_lines=2)
+    y = 232; hlh = int(hf.size * 1.08)
+    y = _draw_tokens(d, MARGIN, y, hlines, hf, INK, ACC, hlh)
+    y += 22
+    pw, ph = maxw, 496
+    img.paste(_photo(photo, pw, ph, seed, mono), (MARGIN, y))
+    _frame(d, (MARGIN - 10, y - 10, MARGIN + pw + 10, y + ph + 10))
+    y2 = y + ph + 32
+    if text:
+        for l in wrap(d, text, body(30, 500), maxw):
+            d.text((MARGIN, y2), l, font=body(30, 500), fill=MUT_L); y2 += 42
+    _meta(d, "", f"{idx:02d} — {total:02d}", C.SWIPE_CUE, dark=False)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG"); return out_path
+
+
+def slide_bigword(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
+    """One giant word bleeding off the edge + a small caption (volume-one move)."""
+    dark = (seed % 2 == 0)
+    img = Image.new("RGB", (W, H), COAL if dark else PAPER); d = ImageDraw.Draw(img)
+    ink = WHITE if dark else INK
+    maxw = W - MARGIN * 2
+    word = (head.split()[0] if head else "").upper()
+    f0 = disp(100, 700); w0 = d.textlength(word, font=f0) or 1
+    size = min(430, max(150, int(100 * (1.16 * W) / w0)))
+    d.text((MARGIN - int(size * 0.04), int(H * 0.33)), word, font=disp(size, 700), fill=ink)
+    _pill(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}",
+          body(19, 700), ACC if dark else INK, WHITE if dark else PAPER)
+    y = H - 250 - 0
+    cap = text or head
+    for l in wrap(d, cap, body(33, 500), maxw - 40):
+        d.text((MARGIN, y), l, font=body(33, 500), fill=(SOFT if dark else MUT_L)); y += 46
+    _meta(d, "", f"{idx:02d} — {total:02d}", C.SWIPE_CUE, dark=dark)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG"); return out_path
+
+
+TEMPLATES = {
+    "photo": slide_photo,     # full-bleed image + overlaid headline
+    "paper": slide_paper,     # airy cream slide + image band
+    "quote": slide_quote,     # oversized «quote» on coal
+    "uicard": slide_uicard,   # centred screenshot/graphic + caption
+    "bigword": slide_bigword, # giant word bleeding off the edge
+}
+
+
+def _slide_fields(item):
+    if isinstance(item, dict):
+        return item.get("head", ""), item.get("body", ""), item.get("tpl")
+    return item[0], item[1], None
+
+
 def carousel(car, out_dir, photos=None, cta_photo=None):
     os.makedirs(out_dir, exist_ok=True)
     photos = photos or []
@@ -345,13 +424,11 @@ def carousel(car, out_dir, photos=None, cta_photo=None):
     cover(car, p, photo=photos[0] if photos else None, mono=mono); paths.append(p)
     total = len(car["slides"])
     for i, item in enumerate(car["slides"], 1):
-        head, text = item[0], item[1]
+        head, text, tpl = _slide_fields(item)
         ph = photos[i] if len(photos) > i else None
         p = os.path.join(out_dir, f"{i:02d}_slide.png")
-        if i % 2 == 1:
-            slide_photo(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
-        else:
-            slide_paper(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
+        fn = TEMPLATES.get(tpl) or (slide_photo if i % 2 == 1 else slide_paper)
+        fn(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
         paths.append(p)
     p = os.path.join(out_dir, "99_cta.png")
     cta(car, p, photo=cta_photo); paths.append(p)
