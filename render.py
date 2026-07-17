@@ -310,8 +310,12 @@ def slide_paper(idx, total, head, text, out_path, kick, photo=None, seed=1, mono
     img.save(out_path, "PNG"); return out_path
 
 
-def cta(car, out_path, photo=None):
-    img = Image.new("RGB", (W, H), COAL); d = ImageDraw.Draw(img)
+def cta(car, out_path, photo=None, mono=False):
+    if photo:
+        img = _scrim(_photo(photo, W, H, 9, mono), base=112, floor=0.0, peak=222, gamma=1.0)
+    else:
+        img = Image.new("RGB", (W, H), COAL)
+    d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
     _pill(d, MARGIN, 250, "СПРОБУЙ БЕЗКОШТОВНО", body(20, 700), ACC, WHITE)
     cta_lines = car["cta"].split("\n")
@@ -337,8 +341,12 @@ def cta(car, out_path, photo=None):
 
 # --- extra templates (library for varied layouts) --------------------------
 def slide_quote(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
-    """Coal slide, oversized quote in «» — a scroll-stopping statement."""
-    img = Image.new("RGB", (W, H), COAL); d = ImageDraw.Draw(img)
+    """Oversized quote in «» — over a darkened photo, or solid coal if none."""
+    if photo:
+        img = _scrim(_photo(photo, W, H, seed, mono), base=88, floor=0.0, peak=210, gamma=1.0)
+    else:
+        img = Image.new("RGB", (W, H), COAL)
+    d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
     _pill(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}",
           body(19, 700), ACC, WHITE)
@@ -431,5 +439,5 @@ def carousel(car, out_dir, photos=None, cta_photo=None):
         fn(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
         paths.append(p)
     p = os.path.join(out_dir, "99_cta.png")
-    cta(car, p, photo=cta_photo); paths.append(p)
+    cta(car, p, photo=cta_photo, mono=mono); paths.append(p)
     return paths
