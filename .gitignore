@@ -4,3 +4,11 @@ __pycache__/
 .env
 .DS_Store
 _sheet_*.png
+# throwaway previews / probes
+_cta*.png
+_probe*.png
+_font_*
+_gen_photos*.png
+_t.png
+_t.html
+_refs/
