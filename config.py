@@ -149,3 +149,19 @@ CAROUSELS = [
 # IG caption footer appended to every carousel caption (kept separate so it's
 # easy to tweak brand-wide).
 CAPTION_FOOTER = "\n\n—\n{brand} · українська галерея для фотографів"
+
+
+# --- Gemini photo prompts (generate_photos.py) -----------------------------
+# Only the *photographic* slides — UI screens are made with headless Chromium.
+# Filename must match the *_photo fields / slide "photo" used above.
+PHOTO_PROMPTS = {
+    "gallery-hero.jpg":
+        "A photographer's elegant online gallery open on a laptop on a linen "
+        "surface beside a coffee, soft morning light, tasteful and premium.",
+    "gallery-beautiful.jpg":
+        "A happy bride scrolling a beautiful full-screen online photo gallery on "
+        "her phone, cozy interior, warm emotion, lifestyle candid.",
+    "photo-photographer.jpg":
+        "A Ukrainian wedding photographer in a calm studio reviewing photos on a "
+        "laptop, confident and warm, editorial portrait, natural light.",
+}
