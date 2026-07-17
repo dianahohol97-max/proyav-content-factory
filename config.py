@@ -44,7 +44,8 @@ CAROUSELS = [
     {
         "id": "CAR_5_POMYLOK",
         "rubric": "edu",
-        "cover": "5 помилок у передачі зйомки клієнту",
+        "kick": "ПОМИЛКА",
+        "cover": "5 *помилок* у передачі зйомки клієнту",
         "cover_sub": "І остання коштує тобі рекомендацій",
         "slides": [
             ("Архів .zip на 4 ГБ",
@@ -72,7 +73,7 @@ CAROUSELS = [
     {
         "id": "CAR_GALEREYA_VS_DRIVE",
         "rubric": "product",
-        "cover": "Галерея проти папки в Google Drive",
+        "cover": "Галерея *проти* папки в Google Drive",
         "cover_sub": "Те саме фото — інша реакція клієнта",
         "slides": [
             ("Перше враження",
@@ -100,7 +101,7 @@ CAROUSELS = [
     {
         "id": "CAR_PODATY_V_INSTAGRAM",
         "rubric": "edu",
-        "cover": "Як гарно подати зйомку в Instagram",
+        "cover": "Як гарно *подати* зйомку в Instagram",
         "cover_sub": "Щоб пост зберігали, а тебе рекомендували",
         "slides": [
             ("Обери одну історію",
