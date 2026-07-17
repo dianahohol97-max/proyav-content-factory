@@ -57,7 +57,7 @@ CAROUSELS = [
         "cover_sub": "І остання коштує тобі рекомендацій",
         # cover/cta images (drop these files in input/photos/)
         "cover_photo": "gallery-hero.jpg",
-        "cta_photo": "gallery-beautiful.jpg",
+        "cta_photo": "site-proyav.jpg",
         # each slide: head + body + image-that-matches-the-text + template.
         # tpl picks a layout from render.TEMPLATES so slides differ visually.
         "slides": [
