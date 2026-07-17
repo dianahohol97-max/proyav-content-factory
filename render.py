@@ -145,13 +145,31 @@ def _hex(h):
 
 
 def _placeholder(w, h, seed):
-    top = _hex(C.ACCENT_SOFT if seed % 2 else C.ACCENT); bot = _hex(COAL)
+    """Moody photographic stand-in (tone + grain + vignette) until real photos
+    land in input/photos/. Never meant to ship — just to read like a photo."""
+    tones = [("#6E6A62", "#171410"), ("#7C8790", "#14181B"),
+             ("#8A7F72", "#1A1512"), ("#585C5A", "#0E0F0D")]
+    a, b = tones[seed % len(tones)]
+    a, b = _hex(a), _hex(b)
     im = Image.new("RGB", (w, h)); px = im.load()
     for y in range(h):
-        t = y / h; row = tuple(int(top[i] * (1 - t) + bot[i] * t) for i in range(3))
+        t = (y / h) ** 1.3
+        row = tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3))
         for x in range(w):
-            px[x, y] = row
-    return im.filter(ImageFilter.GaussianBlur(3))
+            fx = 1 - 0.22 * (abs(x - w * 0.42) / w)   # soft directional light
+            px[x, y] = tuple(min(255, int(c * fx)) for c in row)
+    try:
+        grain = Image.effect_noise((w, h), 26).convert("L")
+        im = Image.composite(im, Image.new("RGB", (w, h), b),
+                             grain.point(lambda v: 150 + v // 4))
+    except Exception:
+        pass
+    im = im.filter(ImageFilter.GaussianBlur(1.4))
+    # vignette
+    vg = Image.new("L", (w, h), 0); dv = ImageDraw.Draw(vg)
+    dv.ellipse([-w * 0.25, -h * 0.22, w * 1.25, h * 1.22], fill=255)
+    vg = vg.filter(ImageFilter.GaussianBlur(int(min(w, h) * 0.22)))
+    return Image.composite(im, Image.new("RGB", (w, h), (8, 7, 6)), vg)
 
 
 def _photo(path, w, h, seed=0, mono=False):
