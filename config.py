@@ -19,8 +19,11 @@ ACCENT_DEEP = "#1F3FE0"
 ACCENT_SOFT = "#8FA2FF"
 COAL        = "#12110E"
 
-DISPLAY = "fonts/Unbounded.ttf"   # variable display face (headlines, wordmark)
-BODY    = "fonts/Manrope.ttf"     # variable body face
+WORDMARK = "fonts/Unbounded.ttf"     # brand wordmark only (проЯв anchor)
+SERIF    = "fonts/Playfair.ttf"       # elegant editorial headlines
+SERIF_IT = "fonts/PlayfairItalic.ttf" # italic accent words
+BODY     = "fonts/Manrope.ttf"        # body + tracked small-caps labels
+DISPLAY  = "fonts/Unbounded.ttf"      # (kept for back-compat)
 
 BRAND    = "проЯв"
 HANDLE   = "@proyav"
@@ -28,6 +31,10 @@ TAGLINE  = "УКРАЇНСЬКА ГАЛЕРЕЯ ДЛЯ ФОТОГРАФІВ"
 
 CAROUSEL_SIZE = (1080, 1350)  # 4:5 -> Instagram carousel
 SWIPE_CUE     = "ГОРТАЙ  →"
+
+# Photos are colour by default; flip to True for a black-&-white feed, or set
+# "mono": True on a single carousel below for a per-carousel mix.
+MONO_PHOTOS   = False
 
 # Rubric labels (rendered as tracked eyebrow — no emoji, Pillow-safe).
 RUBRIC = {
@@ -47,17 +54,26 @@ CAROUSELS = [
         "kick": "ПОМИЛКА",
         "cover": "5 *помилок* у передачі зйомки клієнту",
         "cover_sub": "І остання коштує тобі рекомендацій",
+        # cover/cta images (drop these files in input/photos/)
+        "cover_photo": "gallery-hero.jpg",
+        "cta_photo": "gallery-beautiful.jpg",
+        # each slide: (headline, body, image-that-matches-the-text)
         "slides": [
             ("Архів .zip на 4 ГБ",
-             "Клієнт качає його пів години, а половина не відкриває zip з телефона. Перше враження — зіпсоване."),
+             "Клієнт качає його пів години, а половина не відкриває zip з телефона. Перше враження — зіпсоване.",
+             "screenshot-zip-download.jpg"),
             ("Посилання, що згасає",
-             "WeTransfer живе 7 днів. Через місяць клієнт просить фото ще раз — а їх уже нема."),
+             "WeTransfer живе 7 днів. Через місяць клієнт просить фото ще раз — а їх уже нема.",
+             "screenshot-wetransfer.jpg"),
             ("Купа файлів без ладу",
-             "IMG_0421.jpg нічого не каже. Клієнт губиться і не розуміє, що з цим робити далі."),
+             "IMG_0421.jpg нічого не каже. Клієнт губиться і не розуміє, що з цим робити далі.",
+             "screenshot-messy-files.jpg"),
             ("Жодного «вау»",
-             "Папка з файлами не викликає емоцій. А саме емоція змушує клієнта показати зйомку друзям."),
+             "Папка з файлами не викликає емоцій. А саме емоція змушує клієнта показати зйомку друзям.",
+             "screenshot-drive-folder.jpg"),
             ("Немає шляху до наступного замовлення",
-             "Після передачі зв'язок обривається. Гарна галерея — це місце, де живе твій бренд і наступний продаж."),
+             "Після передачі зв'язок обривається. Гарна галерея — це місце, де живе твій бренд і наступний продаж.",
+             "photo-photographer.jpg"),
         ],
         "cta": "Віддай зйомку так,\nщоб клієнт сказав вау",
         "cta_sub": "Українська галерея для фотографів — спробуй безкоштовно",
@@ -73,6 +89,7 @@ CAROUSELS = [
     {
         "id": "CAR_GALEREYA_VS_DRIVE",
         "rubric": "product",
+        "mono": True,   # this one runs black-&-white for contrast in the feed
         "cover": "Галерея *проти* папки в Google Drive",
         "cover_sub": "Те саме фото — інша реакція клієнта",
         "slides": [

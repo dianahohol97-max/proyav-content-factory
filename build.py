@@ -27,23 +27,30 @@ def _photo_pool():
     return sorted(pool)
 
 
+def _resolve(name, pool, idx):
+    """A named image (input/photos/<name>) that matches the slide's content wins;
+    otherwise fall back to the pool so the layout still renders."""
+    if name:
+        p = os.path.join(PHOTOS_DIR, name)
+        if os.path.exists(p):
+            return p
+    return pool[idx % len(pool)] if pool else None
+
+
 def build_carousels():
     items = []
     pool = _photo_pool()
-    cursor = 0
+    cur = 0
     for car in C.CAROUSELS:
         out_dir = os.path.join(CARS_DIR, car["id"])
-        # a carousel needs 1 cover photo + 1 per content slide; explicit
-        # per-carousel photos win, otherwise draw from the pool round-robin.
-        need = 1 + len(car["slides"])
-        if car.get("photos"):
-            photos = [os.path.join(PHOTOS_DIR, p) for p in car["photos"]]
-        elif pool:
-            photos = [pool[(cursor + i) % len(pool)] for i in range(need)]
-            cursor += need
-        else:
-            photos = []
-        paths = R.carousel(car, out_dir, photos=photos)
+        # per-slide image that matches the text (config: 3rd tuple element or
+        # cover_photo / cta_photo); pool is only a fallback.
+        photos = [_resolve(car.get("cover_photo"), pool, cur)]; cur += 1
+        for item in car["slides"]:
+            nm = item[2] if len(item) > 2 else None
+            photos.append(_resolve(nm, pool, cur)); cur += 1
+        cta_photo = _resolve(car.get("cta_photo"), pool, cur); cur += 1
+        paths = R.carousel(car, out_dir, photos=photos, cta_photo=cta_photo)
         slides = [raw(os.path.relpath(p, ROOT)) for p in paths]
         caption = car["caption"] + C.CAPTION_FOOTER.format(brand=C.BRAND)
         items.append({

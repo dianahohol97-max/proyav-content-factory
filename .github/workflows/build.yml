@@ -31,6 +31,10 @@ jobs:
             "https://raw.githubusercontent.com/google/fonts/main/ofl/unbounded/Unbounded%5Bwght%5D.ttf"
           curl -sSLg -o fonts/Manrope.ttf \
             "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/Manrope%5Bwght%5D.ttf"
+          curl -sSLg -o fonts/Playfair.ttf \
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf"
+          curl -sSLg -o fonts/PlayfairItalic.ttf \
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/playfairdisplay/PlayfairDisplay-Italic%5Bwght%5D.ttf"
 
       - name: Generate carousels + queue
         run: python build.py

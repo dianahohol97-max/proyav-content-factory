@@ -1,32 +1,29 @@
-"""Editorial renderers for проЯв carousels. Monochrome photography + one cobalt
-accent + generous negative space, in the проЯв brand (Unbounded headlines,
-Manrope labels/body, cream & coal grounds). Text is drawn by code — zero typos,
-exact brand colours. Slides are 4:5 (1080×1350) for Instagram.
+"""Editorial renderers for проЯв carousels — moodboard aesthetic, brand DNA kept.
 
-Design language (from the reference moodboards, mapped to the brand):
-- photos are black & white so the cobalt is the only colour that pops;
-- small tracked labels sit in the corners (brand · rubric · index · swipe);
-- sticker pills carry the kicker; headlines can accent a *word* in cobalt;
-- content alternates full-bleed photo slides with airy paper slides.
-Real photos live in input/photos/ (live or generated); an empty pool falls back
-to a branded gradient.
+Type: Playfair Display for headlines (with *italic* accent words) — the editorial
+elegance from the references; Manrope for body and tracked small-caps labels;
+Unbounded reserved for the проЯв wordmark (brand anchor). Palette stays neutral
+(cream & coal); cobalt appears sparingly — the wordmark Я, the index, one CTA
+button. Photos can be colour or black-&-white. Slides are 4:5 (1080×1350).
 """
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 import config as C
 
-MARGIN = 84
+MARGIN = 88
 W, H = C.CAROUSEL_SIZE
 
 PAPER = "#F4F4F1"
-COAL = "#12110E"
-INK = "#0D0C0A"
-MUT_L = "#6F6D66"        # muted on paper
-MUT_D = "#9C978C"        # muted on coal / photo
-ACC = "#2F55FF"          # cobalt on paper
-ACC_D = "#6E8BFF"        # brighter cobalt on dark
-WHITE = "#FFFFFF"
-SOFT = "#E8E5DE"
+COAL = "#14130F"
+INK = "#111014"
+MUT_L = "#6F6D66"
+MUT_D = "#A9A49A"
+HAIR_L = "#D9D6CE"
+HAIR_D = "#3A382F"
+ACC = "#2F55FF"
+ACC_D = "#7C93FF"
+WHITE = "#FBFAF7"
+SOFT = "#E7E3DB"
 
 
 def _f(path, size, wght):
@@ -38,12 +35,24 @@ def _f(path, size, wght):
     return f
 
 
-def disp(size, wght=600):
-    return _f(C.DISPLAY, size, wght)
+def serif(size, wght=560):
+    return _f(C.SERIF, size, wght)
+
+
+def serif_it(size, wght=560):
+    return _f(C.SERIF_IT, size, wght)
 
 
 def body(size, wght=500):
     return _f(C.BODY, size, wght)
+
+
+def wm_font(size, wght=600):
+    return _f(C.WORDMARK, size, wght)
+
+
+def _hex(h):
+    h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
 def _tw(d, s, f, tr=0):
@@ -51,6 +60,7 @@ def _tw(d, s, f, tr=0):
 
 
 def tracked(d, x, y, s, f, fill, tr=0, anchor="la", shadow=None):
+    s = s
     w = _tw(d, s, f, tr)
     if anchor == "ma":
         x -= w / 2
@@ -59,17 +69,19 @@ def tracked(d, x, y, s, f, fill, tr=0, anchor="la", shadow=None):
     if shadow:
         xx = x
         for c in s:
-            d.text((xx + 2, y + 2), c, font=f, fill=shadow); xx += d.textlength(c, font=f) + tr
+            d.text((xx + 1.5, y + 1.5), c, font=f, fill=shadow); xx += d.textlength(c, font=f) + tr
     xx = x
     for c in s:
         d.text((xx, y), c, font=f, fill=fill); xx += d.textlength(c, font=f) + tr
 
 
-# --- accented headline (words wrapped inside *…* render in cobalt) ----------
+# --- accented serif headline (words in *…* become italic) ------------------
 def _tokens(text):
     out, acc, cur = [], False, ""
     for ch in text:
         if ch == "*":
+            if cur:
+                out.append((cur, acc)); cur = ""
             acc = not acc
         elif ch == " ":
             if cur:
@@ -81,11 +93,16 @@ def _tokens(text):
     return out
 
 
-def _wrap_tokens(d, toks, f, maxw):
-    lines, cur = [], []
-    sp = d.textlength(" ", font=f)
-    wcur = 0
+def _fw(size):
+    return serif(size), serif_it(size)
+
+
+def _wrap_tokens(d, toks, size, maxw):
+    rf, itf = _fw(size)
+    sp = d.textlength(" ", font=rf)
+    lines, cur, wcur = [], [], 0
     for word, a in toks:
+        f = itf if a else rf
         ww = d.textlength(word, font=f)
         add = ww + (sp if cur else 0)
         if cur and wcur + add > maxw:
@@ -97,29 +114,28 @@ def _wrap_tokens(d, toks, f, maxw):
     return lines
 
 
-def _fit_tokens(d, toks, maxw, start, min_size, max_lines, wght=600):
+def _fit_tokens(d, toks, maxw, start, min_size, max_lines):
     size = start
     while size >= min_size:
-        f = disp(size, wght)
-        lines = _wrap_tokens(d, toks, f, maxw)
-        if len(lines) <= max_lines and all(
-                sum(d.textlength(w, font=f) for w, _ in ln) +
-                d.textlength(" ", font=f) * (len(ln) - 1) <= maxw for ln in lines):
-            return f, lines
+        lines = _wrap_tokens(d, toks, size, maxw)
+        rf, itf = _fw(size); sp = d.textlength(" ", font=rf)
+        ok = all(sum(d.textlength(w, font=(itf if a else rf)) for w, a in ln) +
+                 sp * (len(ln) - 1) <= maxw for ln in lines)
+        if len(lines) <= max_lines and ok:
+            return size, lines
         size -= 3
-    f = disp(min_size, wght)
-    return f, _wrap_tokens(d, toks, f, maxw)
+    return min_size, _wrap_tokens(d, toks, min_size, maxw)
 
 
-def _draw_tokens(d, x, y, lines, f, base, accent, lh, shadow=None):
-    sp = d.textlength(" ", font=f)
+def _draw_tokens(d, x, y, lines, size, base, lh, shadow=None):
+    rf, itf = _fw(size); sp = d.textlength(" ", font=rf)
     for ln in lines:
         xx = x
         for word, a in ln:
-            col = accent if a else base
+            f = itf if a else rf
             if shadow:
-                d.text((xx + 2, y + 3), word, font=f, fill=shadow)
-            d.text((xx, y), word, font=f, fill=col)
+                d.text((xx + 1.5, y + 2), word, font=f, fill=shadow)
+            d.text((xx, y), word, font=f, fill=base)
             xx += d.textlength(word, font=f) + sp
         y += lh
     return y
@@ -139,22 +155,26 @@ def wrap(d, text, f, maxw):
     return lines
 
 
-# --- photo helpers ---------------------------------------------------------
-def _hex(h):
-    h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-
+# --- photo -----------------------------------------------------------------
 def _placeholder(w, h, seed):
-    top = _hex(C.ACCENT_SOFT if seed % 2 else C.ACCENT); bot = _hex(COAL)
+    tones = [("#B9B2A6", "#4B463D"), ("#A7ADB0", "#3C4044"), ("#C3B4A6", "#5A4B41")]
+    a, b = tones[seed % len(tones)]
+    a, b = _hex(a), _hex(b)
     im = Image.new("RGB", (w, h)); px = im.load()
     for y in range(h):
-        t = y / h; row = tuple(int(top[i] * (1 - t) + bot[i] * t) for i in range(3))
+        t = (y / h) ** 1.2
+        row = tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3))
         for x in range(w):
             px[x, y] = row
-    return im.filter(ImageFilter.GaussianBlur(3))
+    try:
+        im = Image.composite(im, Image.new("RGB", (w, h), b),
+                             Image.effect_noise((w, h), 14).point(lambda v: 150 + v // 5))
+    except Exception:
+        pass
+    return im.filter(ImageFilter.GaussianBlur(4))
 
 
-def _photo(path, w, h, seed=0, mono=True):
+def _photo(path, w, h, seed=0, mono=False):
     if path and os.path.exists(path):
         try:
             im = Image.open(path).convert("RGB")
@@ -167,126 +187,107 @@ def _photo(path, w, h, seed=0, mono=True):
     else:
         im = _placeholder(w, h, seed)
     if mono:
-        im = ImageOps.grayscale(im)
-        im = ImageOps.autocontrast(im, cutoff=1).convert("RGB")
+        im = ImageOps.autocontrast(ImageOps.grayscale(im), cutoff=1).convert("RGB")
     return im
 
 
-def _scrim(img, base=60, floor=0.34, peak=228, gamma=1.35, tint=(0, 0, 0)):
+def _scrim(img, base=48, floor=0.40, peak=214, gamma=1.5):
     w, h = img.size; mask = Image.new("L", (w, h)); mpx = mask.load(); y0 = h * floor
     for y in range(h):
         a = base + (int((peak - base) * (((y - y0) / (h - y0)) ** gamma)) if y > y0 else 0)
-        a = min(245, a)
         for x in range(w):
-            mpx[x, y] = a
-    return Image.composite(Image.new("RGB", (w, h), tint), img, mask)
+            mpx[x, y] = min(240, a)
+    return Image.composite(Image.new("RGB", (w, h), (10, 9, 7)), img, mask)
 
 
-def _frame(d, box, col=ACC, tick=26, wdt=4):
-    """Editorial corner ticks around a photo inset."""
+def _inset(img, box, photo, seed, mono, hair):
     x0, y0, x1, y1 = box
-    for (cx, cy, sx, sy) in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)):
-        d.line([(cx, cy), (cx + sx * tick, cy)], fill=col, width=wdt)
-        d.line([(cx, cy), (cx, cy + sy * tick)], fill=col, width=wdt)
+    img.paste(_photo(photo, x1 - x0, y1 - y0, seed, mono), (x0, y0))
+    ImageDraw.Draw(img).rectangle([x0, y0, x1 - 1, y1 - 1], outline=hair, width=2)
 
 
-def _pill(d, x, y, text, f, fill, tc, padx=20, pady=11, tr=2):
-    tw = _tw(d, text, f, tr); h = f.size + pady * 2
-    d.rounded_rectangle([x, y, x + tw + padx * 2, y + h], radius=(h // 2), fill=fill)
-    tracked(d, x + padx, y + pady - 2, text, f, tc, tr=tr)
-    return x + tw + padx * 2, y + h
-
-
-# --- corner metadata -------------------------------------------------------
-def _meta(d, rubric, index_txt, cue, dark):
-    ink = PAPER if dark else INK
-    mut = MUT_D if dark else MUT_L
-    acc = ACC_D if dark else ACC
-    # top-left wordmark
-    wf = disp(24, 600)
+# --- shared chrome ---------------------------------------------------------
+def _wordmark_corner(d, dark):
+    ink = WHITE if dark else INK
     x = MARGIN
-    for t, col in (("про", ink), ("Я", acc), ("в", ink)):
-        d.text((x, 74), t, font=wf, fill=col); x += d.textlength(t, font=wf)
-    # top-right rubric + line
-    tracked(d, W - MARGIN, 76, C.RUBRIC.get(rubric, "").upper(), body(18, 700), acc, tr=3, anchor="ra")
-    tracked(d, W - MARGIN, 102, "УКРАЇНСЬКА ГАЛЕРЕЯ", body(15, 600), mut, tr=3, anchor="ra")
-    # bottom-left index
+    f = wm_font(23, 600)
+    for t, col in (("про", ink), ("Я", ACC_D if dark else ACC), ("в", ink)):
+        d.text((x, 70), t, font=f, fill=col); x += d.textlength(t, font=f)
+
+
+def _label(d, x, y, text, color, rule_color):
+    """Small-caps tracked label with a short leading rule (editorial)."""
+    d.line([(x, y + 9), (x + 26, y + 9)], fill=rule_color, width=2)
+    tracked(d, x + 40, y, text.upper(), body(17, 700), color, tr=3)
+
+
+def _meta(d, rubric, index_txt, cue, dark):
+    ink = WHITE if dark else INK
+    mut = MUT_D if dark else MUT_L
+    _wordmark_corner(d, dark)
+    if rubric:
+        tracked(d, W - MARGIN, 72, C.RUBRIC.get(rubric, "").upper(), body(16, 700), mut, tr=3, anchor="ra")
+        tracked(d, W - MARGIN, 96, "УКРАЇНСЬКА ГАЛЕРЕЯ", body(14, 600), mut, tr=3, anchor="ra")
     if index_txt:
-        tracked(d, MARGIN, H - 96, index_txt, body(18, 700), acc, tr=3)
-    # bottom-right cue
+        tracked(d, MARGIN, H - 92, index_txt, body(16, 700), ACC_D if dark else ACC, tr=3)
     if cue:
-        tracked(d, W - MARGIN, H - 96, cue, body(18, 700), mut, tr=3, anchor="ra")
+        tracked(d, W - MARGIN, H - 92, cue, body(16, 700), mut, tr=3, anchor="ra")
 
 
 # --- slides ----------------------------------------------------------------
-def cover(car, out_path, photo=None):
+def cover(car, out_path, photo=None, mono=False):
     img = Image.new("RGB", (W, H), PAPER); d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
-    # headline (accent words in cobalt)
-    toks = _tokens(car["cover"])
-    f, lines = _fit_tokens(d, toks, maxw, start=92, min_size=54, max_lines=4)
-    lh = int(f.size * 1.08)
-    y = 250
-    y = _draw_tokens(d, MARGIN, y, lines, f, INK, ACC, lh)
-    y += 6
-    d.rectangle([MARGIN, y, MARGIN + 96, y + 7], fill=ACC)
-    # subtitle
-    if car.get("cover_sub"):
-        y += 34
-        for l in wrap(d, car["cover_sub"], body(31, 500), maxw - 360):
-            d.text((MARGIN, y), l, font=body(31, 500), fill=MUT_L); y += 42
-    # B&W photo inset, bottom-right
-    pw, ph = 400, 500
-    px0, py0 = W - MARGIN - pw, H - 150 - ph
-    img.paste(_photo(photo, pw, ph, 0), (px0, py0))
-    _frame(d, (px0 - 10, py0 - 10, px0 + pw + 10, py0 + ph + 10))
     _meta(d, car["rubric"], "МІНІ-ГАЙД", C.SWIPE_CUE, dark=False)
+    if car.get("kick") or True:
+        _label(d, MARGIN, 168, car.get("kick_label", "РОЗБІР"), INK, ACC)
+    size, lines = _fit_tokens(d, _tokens(car["cover"]), maxw, start=98, min_size=56, max_lines=4)
+    y = 236
+    lh = int(size * 1.02)
+    y = _draw_tokens(d, MARGIN, y, lines, size, INK, lh)
+    if car.get("cover_sub"):
+        y += 26
+        for l in wrap(d, car["cover_sub"], body(30, 500), maxw - 380):
+            d.text((MARGIN, y), l, font=body(30, 500), fill=MUT_L); y += 42
+    pw, ph = 408, 512
+    _inset(img, (W - MARGIN - pw, H - 150 - ph, W - MARGIN, H - 150), photo, 0, mono, HAIR_L)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG"); return out_path
 
 
-def slide_photo(idx, total, head, text, out_path, kick, photo=None, seed=1):
-    img = _scrim(_photo(photo, W, H, seed), base=58, floor=0.30, peak=232)
+def slide_photo(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
+    img = _scrim(_photo(photo, W, H, seed, mono))
     d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
-    label = f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}"
-    _pill(d, MARGIN, 150, label, body(19, 700), ACC, WHITE)
-    hf, hlines = _fit_tokens(d, _tokens(head), maxw, start=62, min_size=42, max_lines=2)
-    bf = body(34, 500); blines = wrap(d, text, bf, maxw)
-    hlh = int(hf.size * 1.1); blh = int(bf.size * 1.4)
+    _label(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"РОЗДІЛ {idx:02d}", WHITE, ACC_D)
+    size, hlines = _fit_tokens(d, _tokens(head), maxw, start=72, min_size=46, max_lines=2)
+    bf = body(33, 500); blines = wrap(d, text, bf, maxw)
+    hlh = int(size * 1.04); blh = int(bf.size * 1.42)
     block = len(hlines) * hlh + 22 + len(blines) * blh
-    y = H - 250 - block
-    bar_top = y + 4
-    y = _draw_tokens(d, MARGIN, y, hlines, hf, WHITE, ACC_D, hlh, shadow=(0, 0, 0))
-    d.rectangle([MARGIN - 30, bar_top, MARGIN - 20, y - int(hf.size * 0.5)], fill=ACC)
-    y += 20
+    y = H - 240 - block
+    y = _draw_tokens(d, MARGIN, y, hlines, size, WHITE, hlh, shadow=(8, 7, 5))
+    y += 22
     for l in blines:
-        tracked(d, MARGIN, y, l, bf, SOFT, shadow=(0, 0, 0)); y += blh
+        tracked(d, MARGIN, y, l, bf, SOFT, shadow=(8, 7, 5)); y += blh
     _meta(d, "", f"{idx:02d} — {total:02d}", C.SWIPE_CUE, dark=True)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG"); return out_path
 
 
-def slide_paper(idx, total, head, text, out_path, kick, photo=None, seed=1):
+def slide_paper(idx, total, head, text, out_path, kick, photo=None, seed=1, mono=False):
     img = Image.new("RGB", (W, H), PAPER); d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
-    label = f"{kick} {idx:02d}" if kick else f"{idx:02d} / {total:02d}"
-    _pill(d, MARGIN, 150, label, body(19, 700), INK, PAPER)
-    # headline
-    hf, hlines = _fit_tokens(d, _tokens(head), maxw, start=60, min_size=40, max_lines=2)
-    y = 250
-    hlh = int(hf.size * 1.1)
-    y = _draw_tokens(d, MARGIN, y, hlines, hf, INK, ACC, hlh)
-    d.rectangle([MARGIN, y + 10, MARGIN + 70, y + 16], fill=ACC)
-    y += 46
-    bf = body(34, 500)
+    _label(d, MARGIN, 150, f"{kick} {idx:02d}" if kick else f"РОЗДІЛ {idx:02d}", INK, ACC)
+    size, hlines = _fit_tokens(d, _tokens(head), maxw, start=68, min_size=44, max_lines=2)
+    y = 232
+    hlh = int(size * 1.04)
+    y = _draw_tokens(d, MARGIN, y, hlines, size, INK, hlh)
+    y += 24
+    bf = body(33, 500)
     for l in wrap(d, text, bf, maxw - 40):
-        d.text((MARGIN, y), l, font=bf, fill=MUT_L); y += int(bf.size * 1.42)
-    # B&W photo band bottom
-    pw, ph = maxw, 380
-    px0, py0 = MARGIN, H - 170 - ph
-    img.paste(_photo(photo, pw, ph, seed), (px0, py0))
-    _frame(d, (px0 - 10, py0 - 10, px0 + pw + 10, py0 + ph + 10))
+        d.text((MARGIN, y), l, font=bf, fill=MUT_L); y += int(bf.size * 1.44)
+    pw, ph = maxw, 372
+    _inset(img, (MARGIN, H - 168 - ph, MARGIN + pw, H - 168), photo, seed, mono, HAIR_L)
     _meta(d, "", f"{idx:02d} — {total:02d}", C.SWIPE_CUE, dark=False)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG"); return out_path
@@ -295,44 +296,46 @@ def slide_paper(idx, total, head, text, out_path, kick, photo=None, seed=1):
 def cta(car, out_path, photo=None):
     img = Image.new("RGB", (W, H), COAL); d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
-    _pill(d, MARGIN, 250, "СПРОБУЙ БЕЗКОШТОВНО", body(20, 700), ACC, WHITE)
-    cta_lines = car["cta"].split("\n")
-    size = 86
-    while size >= 48:
-        f = disp(size, 600)
-        if all(d.textlength(l, font=f) <= maxw for l in cta_lines):
-            break
-        size -= 3
-    y = 380
-    for l in cta_lines:
-        d.text((MARGIN, y), l, font=f, fill=PAPER); y += int(f.size * 1.12)
-    y += 14
-    d.rectangle([MARGIN, y, MARGIN + 96, y + 7], fill=ACC); y += 36
+    _label(d, MARGIN, 236, "ЗБЕРЕЖИ · ПОДІЛИСЯ", MUT_D, ACC_D)
+    size, lines = _fit_tokens(d, _tokens(car["cta"].replace("\n", " ")), maxw, start=94, min_size=54, max_lines=3)
+    y = 300
+    lh = int(size * 1.05)
+    y = _draw_tokens(d, MARGIN, y, lines, size, WHITE, lh)
     if car.get("cta_sub"):
-        for l in wrap(d, car["cta_sub"], body(32, 500), maxw - 200):
-            d.text((MARGIN, y), l, font=body(32, 500), fill=MUT_D); y += 44
-    tracked(d, MARGIN, H - 330, C.HANDLE, disp(46, 600), ACC_D, tr=1)
+        y += 24
+        for l in wrap(d, car["cta_sub"], body(31, 500), maxw - 220):
+            d.text((MARGIN, y), l, font=body(31, 500), fill=MUT_D); y += 44
+    # single cobalt moment — the CTA button
+    y += 30
+    bf = body(20, 700); btxt = "СПРОБУЙ БЕЗКОШТОВНО  →"
+    bw = _tw(d, btxt, bf, 2) + 56; bh = 68
+    d.rounded_rectangle([MARGIN, y, MARGIN + bw, y + bh], radius=34, fill=ACC)
+    tracked(d, MARGIN + 28, y + 22, btxt, bf, WHITE, tr=2)
+    # handle in elegant italic
+    d.text((MARGIN, H - 150 - 60), C.HANDLE, font=serif_it(46, 560), fill=WHITE)
     _meta(d, car["rubric"], "", "проЯв.space", dark=True)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG"); return out_path
 
 
-def carousel(car, out_dir, photos=None):
+def carousel(car, out_dir, photos=None, cta_photo=None):
     os.makedirs(out_dir, exist_ok=True)
     photos = photos or []
     kick = car.get("kick")
+    mono = car.get("mono", getattr(C, "MONO_PHOTOS", False))
     paths = []
     p = os.path.join(out_dir, "00_cover.png")
-    cover(car, p, photo=photos[0] if photos else None); paths.append(p)
+    cover(car, p, photo=photos[0] if photos else None, mono=mono); paths.append(p)
     total = len(car["slides"])
-    for i, (head, text) in enumerate(car["slides"], 1):
+    for i, item in enumerate(car["slides"], 1):
+        head, text = item[0], item[1]
         ph = photos[i] if len(photos) > i else None
         p = os.path.join(out_dir, f"{i:02d}_slide.png")
         if i % 2 == 1:
-            slide_photo(i, total, head, text, p, kick, photo=ph, seed=i)
+            slide_photo(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
         else:
-            slide_paper(i, total, head, text, p, kick, photo=ph, seed=i)
+            slide_paper(i, total, head, text, p, kick, photo=ph, seed=i, mono=mono)
         paths.append(p)
     p = os.path.join(out_dir, "99_cta.png")
-    cta(car, p, photo=photos[-1] if photos else None); paths.append(p)
+    cta(car, p, photo=cta_photo); paths.append(p)
     return paths
