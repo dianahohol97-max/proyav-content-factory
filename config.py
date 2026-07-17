@@ -27,6 +27,7 @@ DISPLAY  = "fonts/Unbounded.ttf"      # (kept for back-compat)
 
 BRAND    = "проЯв"
 HANDLE   = "@proyav"
+SITE     = "проЯв.space"
 TAGLINE  = "УКРАЇНСЬКА ГАЛЕРЕЯ ДЛЯ ФОТОГРАФІВ"
 
 CAROUSEL_SIZE = (1080, 1350)  # 4:5 -> Instagram carousel

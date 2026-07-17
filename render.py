@@ -333,8 +333,14 @@ def cta(car, out_path, photo=None, mono=False):
     if car.get("cta_sub"):
         for l in wrap(d, car["cta_sub"], body(32, 500), maxw - 200):
             d.text((MARGIN, y), l, font=body(32, 500), fill=MUT_D); y += 44
-    tracked(d, MARGIN, H - 330, C.HANDLE, disp(46, 600), ACC_D, tr=1)
-    _meta(d, car["rubric"], "", "проЯв.space", dark=True)
+    # website — the primary action on the closing slide
+    site = getattr(C, "SITE", "проЯв.space")
+    ys = H - 358
+    tracked(d, MARGIN, ys, site, disp(54, 600), WHITE, tr=1)
+    sw = min(_tw(d, site, disp(54, 600), 1), maxw)
+    d.rectangle([MARGIN, ys + 70, MARGIN + sw, ys + 77], fill=ACC)
+    tracked(d, MARGIN, ys + 98, C.HANDLE, body(24, 700), MUT_D, tr=2)
+    _meta(d, car["rubric"], "", "", dark=True)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG"); return out_path
 
