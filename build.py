@@ -7,8 +7,20 @@ reads the queue and dedups by `id` in its Data Store, so re-running is safe.
 import json
 import os
 import glob
+from PIL import Image
 import config as C
 import render as R
+
+
+def _to_jpg(paths):
+    """Instagram's publishing API accepts JPEG, not PNG. Save a JPEG beside each
+    rendered PNG and return the JPEG paths (used for the IG-facing queue URLs)."""
+    out = []
+    for p in paths:
+        jpg = os.path.splitext(p)[0] + ".jpg"
+        Image.open(p).convert("RGB").save(jpg, "JPEG", quality=92)
+        out.append(jpg)
+    return out
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CARS_DIR = os.path.join(ROOT, "output", "carousels")
@@ -54,6 +66,7 @@ def build_carousels():
             photos.append(_resolve(nm, pool, cur)); cur += 1
         cta_photo = _resolve(car.get("cta_photo"), pool, cur); cur += 1
         paths = R.carousel(car, out_dir, photos=photos, cta_photo=cta_photo)
+        paths = _to_jpg(paths)   # IG needs JPEG
         slides = [raw(os.path.relpath(p, ROOT)) for p in paths]
         caption = car["caption"] + C.CAPTION_FOOTER.format(brand=C.BRAND)
         items.append({
