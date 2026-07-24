@@ -1,27 +1,66 @@
-# проЯв — контент-конвеєр (адмінка → авто-постинг)
+# проЯв — контент-конвеєр (мульти-канал + Threads + Telegram)
 
-Дані живуть у Supabase проЯв (`proiav.space`), поруч із блогом.
+Дані живуть у Supabase проЯв (`proiav.space`), поруч із блогом. Ти працюєш в
+адмінці проЯв та у Telegram; решта — автоматично.
 
-## Таблиці
-- **social_topics** — беклог ідей (як `blog_topics`): `slug, title, rubric, kind
-  (carousel|reel|story|single), status (todo|done), position`.
-- **social_posts** — готовий контент зі статусами:
-  `kind, rubric, hook, body(jsonb), caption, hashtags, media(jsonb),
-   video_prompt, status, scheduled_at, posted_at, external_id, source, position`.
-  - `status`: `draft → needs_video → ready → approved → scheduled → posted`.
-  - Для каруселей `external_id` = id у фабриці; повні слайди/підпис бере Make з
-    `queue/carousel_queue.json` (у Supabase — лише обкладинка для прев'ю).
+## Потік контенту
+```
+теми (беклог)
+   → я генерую контент (усі формати з одного тексту)
+      → Telegram-сповіщення / адмінка: ти ✅ затверджуєш
+         → Make постить у всі канали формату за розкладом
+```
 
-## Потік
-1. **Я генерую** → рядок у `social_posts` (`draft`; рілс — `needs_video` +
-   `video_prompt` під Gemini omni, 9:16).
-2. **Рілс**: ти робиш відео за промтом → вантажиш → `ready`.
-3. **Ти в адмінці** тиснеш «Затвердити» → `approved` (+ `scheduled_at`).
-4. **Make** (той самий, що постить каруселі) опитує `approved`, постить у IG,
-   ставить `posted` + `posted_at`.
+## Канали (маршрутизація)
+| Формат | Instagram | TikTok | Pinterest |
+|---|:--:|:--:|:--:|
+| Рілс | Reels | відео | — |
+| Карусель | стрічка | фото-карусель | піни (+лінк на проЯв.space) |
+| Сторіс | Stories | — | — |
 
-## Статус
-- [x] Таблиці + RLS + сід (20 тем, 3 каруселі `draft`).
-- [ ] Вкладка «Контент» в адмінці проЯв — чекає репо застосунку.
-- [ ] Make: додати гілку «читати social_posts зі статусом approved».
-- [ ] Рілс-генерація (сценарій + промт Gemini omni).
+Один затверджений пост → Make розгалужується на всі канали свого формату.
+
+## Формати, що рендерить фабрика (з одних текстів)
+- IG карусель — 4:5
+- Pinterest — 2:3 (1000×1500) + лінк
+- TikTok / рілс — 9:16
+- Рілс-відео — Gemini omni (9:16), генерує Diana за промтом
+
+## Таблиці (Supabase)
+- **social_topics** — беклог ідей (`todo|done`).
+- **social_posts** — контент: `kind, rubric, hook, body, caption, hashtags,
+  media, video_prompt, status, scheduled_at, posted_at, external_id`.
+  `status: draft → needs_video → ready → approved → scheduled → posted`.
+- **threads_replies** *(Phase 2)* — `source_url, source_text, draft_reply,
+  status (draft|approved|posted|skipped), posted_at`.
+
+## Система Threads (окремий цикл)
+```
+пошук релевантних постів/коментів (ключі з дослідження)
+  → AI пише корисний драфт коментаря від проЯв
+    → Telegram: драфт + кнопки ✅ / ✏️ / ❌
+      → ✅ → публікується автоматично
+```
+Ключі: «гугл диск», «як віддати фото», «галерея», «Pixieset», «Pixover» тощо.
+Тон — цінність, не реклама в лоб. Обмеження: Threads API дає вибірку свіжих
+постів за ключами, не «весь Threads».
+
+## Затвердження — Telegram-бот
+Сповіщення про пости й Threads-коменти з кнопками **✅ Опублікувати / ✏️ Змінити
+/ ❌ Пропустити**. Затвердження прямо з телефона, без входу в адмінку.
+
+## Ритм постингу (старт)
+3 пости/тиждень: Пн — Освіта, Ср — Продукт, Пт — Бренд/спільнота. Задається
+`scheduled_at` + розкладом Make.
+
+## Дорожня карта
+**Phase 1 — зараз (не потребує акаунтів):**
+- [x] Дані: `social_topics` + `social_posts` (сід: 20 тем, 3 каруселі).
+- [ ] Генерація контенту в конвеєр (каруселі + рілс-сценарії/промти).
+- [ ] Фабрика: варіанти 2:3 (Pinterest) і 9:16 (TikTok).
+- [ ] Логіка Threads-драфтів (генерація коментарів) + таблиця.
+
+**Phase 2 — коли готові бізнес-акаунти (наступний етап Diana):**
+- [ ] IG Business, Pinterest Business, TikTok Business, Threads API.
+- [ ] Make: гілки постингу по каналах + читання `approved`.
+- [ ] Telegram-бот: живі кнопки затвердження → публікація.
