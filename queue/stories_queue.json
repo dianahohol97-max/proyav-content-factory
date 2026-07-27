@@ -1,0 +1,20 @@
+[
+  {
+    "id": "HL_GALEREYA",
+    "title": "проЯв — фотогалерея",
+    "frames": [
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/00_cover.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/01_price.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/02_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/03_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/04_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/05_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/06_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/07_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/08_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/09_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/10_feature.png",
+      "https://raw.githubusercontent.com/dianahohol97-max/proyav-content-factory/main/output/stories/HL_GALEREYA/11_cta.png"
+    ]
+  }
+]

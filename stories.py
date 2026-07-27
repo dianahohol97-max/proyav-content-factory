@@ -198,8 +198,30 @@ def highlight(story, out_dir):
     return paths
 
 
+def write_queue(rendered):
+    """Publish a manifest the проЯв admin reads (queue/stories_queue.json):
+    every set with its frame RAW urls, so the founder downloads finished
+    frames straight from the dashboard."""
+    import json
+    items = []
+    for st, paths in rendered:
+        items.append({
+            "id": st["id"],
+            "title": st["title"],
+            "frames": [f"{C.RAW}/{p.replace(os.sep, '/')}" for p in paths],
+        })
+    os.makedirs("queue", exist_ok=True)
+    with open(os.path.join("queue", "stories_queue.json"), "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+    return items
+
+
 if __name__ == "__main__":
+    rendered = []
     for st in C.STORIES:
         out = os.path.join("output", "stories", st["id"])
         made = highlight(st, out)
+        rendered.append((st, made))
         print(f"{st['id']}: {len(made)} frames -> {out}")
+    write_queue(rendered)
+    print("queue/stories_queue.json updated")
