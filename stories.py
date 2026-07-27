@@ -75,29 +75,44 @@ def frame_cover(story, out_path):
     return out_path
 
 
+PHOTO_DIR = os.path.join("input", "photos")
+
+
 def frame_feature(story, fr, idx, total, out_path):
-    """Paper feature frame: eyebrow pill, accented headline, body, rule."""
+    """Paper feature frame: eyebrow pill, accented headline, body, and — when a
+    `photo` is given — a framed image band from the проЯв site at the bottom."""
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
+    photo = fr.get("photo")
+    has_photo = bool(photo and os.path.exists(os.path.join(PHOTO_DIR, photo)))
     # eyebrow pill
     label = f"{fr.get('kick', 'ФУНКЦІЯ')} · {idx:02d}"
-    R.tracked(d, MARGIN, TOP_SAFE + 30, "", R.body(1, 700), INK)  # noop keep spacing
     R._pill(d, MARGIN, TOP_SAFE + 20, label, R.body(22, 700), ACC, WHITE, tr=2)
-    # headline (accent word in cobalt)
-    hf, hlines = R._fit_tokens(d, R._tokens(fr["head"]), maxw, start=104, min_size=58, max_lines=4)
+    # headline (accent word in cobalt) — a touch smaller when a photo shares the frame
+    hstart = 92 if has_photo else 104
+    hmax_lines = 3 if has_photo else 4
+    hf, hlines = R._fit_tokens(d, R._tokens(fr["head"]), maxw, start=hstart, min_size=54, max_lines=hmax_lines)
     hlh = int(hf.size * 1.06)
     y = TOP_SAFE + 150
     y = R._draw_tokens(d, MARGIN, y, hlines, hf, INK, ACC, hlh)
     # rule
-    y += 24
+    y += 22
     d.rectangle([MARGIN, y, MARGIN + 100, y + 8], fill=ACC)
-    y += 54
+    y += 50
     # body
-    bf = R.body(40, 500)
+    bf = R.body(38, 500)
     for l in R.wrap(d, fr["body"], bf, maxw):
         d.text((MARGIN, y), l, font=bf, fill=MUT_L)
         y += int(bf.size * 1.42)
+    # photo band from the site, filling the space down to the safe zone
+    if has_photo:
+        band_top = max(y + 40, H - 300 - 720)
+        ph = BOT_SAFE - band_top - 20
+        if ph > 300:
+            pth = os.path.join(PHOTO_DIR, photo)
+            img.paste(R._photo(pth, maxw, ph, seed=idx, mono=False), (MARGIN, band_top))
+            R._frame(d, (MARGIN - 10, band_top - 10, MARGIN + maxw + 10, band_top + ph + 10))
     _footer(d, dark=False, index=f"{idx:02d} — {total:02d}")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG")
@@ -105,26 +120,35 @@ def frame_feature(story, fr, idx, total, out_path):
 
 
 def frame_price(story, idx, total, out_path):
-    """Coal price frame — the offer, big and clean."""
+    """Coal price frame — free tier headline + the real tier ladder."""
     img = Image.new("RGB", (W, H), COAL)
     d = ImageDraw.Draw(img)
     maxw = W - MARGIN * 2
     R._pill(d, MARGIN, TOP_SAFE + 20, C.PRICE_EYEBROW, R.body(22, 700), ACC_D, COAL, tr=3)
-    y = TOP_SAFE + 150
-    d.text((MARGIN, y), C.PRICE_FREE, font=R.disp(64, 600), fill=PAPER)
-    y += 150
-    R.tracked(d, MARGIN, y, "далі", R.body(30, 600), MUT_D, tr=2)
-    y += 66
-    # big number
-    d.text((MARGIN, y), C.PRICE_MAIN, font=R.disp(150, 700), fill=PAPER)
-    y += 190
-    d.text((MARGIN, y), C.PRICE_SUB, font=R.disp(60, 600), fill=ACC_D)
-    y += 96
-    d.rectangle([MARGIN, y, MARGIN + 100, y + 8], fill=ACC_D)
+    y = TOP_SAFE + 140
+    # free tier — the hero number
+    d.text((MARGIN, y), C.PRICE_FREE_BIG, font=R.disp(150, 700), fill=PAPER)
+    y += 178
+    for l in R.wrap(d, C.PRICE_FREE_SUB, R.body(34, 500), maxw):
+        d.text((MARGIN, y), l, font=R.body(34, 500), fill=ACC_D)
+        y += 46
+    y += 34
+    d.rectangle([MARGIN, y, W - MARGIN, y + 2], fill="#2A2824")
     y += 44
-    for l in R.wrap(d, C.PRICE_NOTE, R.body(34, 500), maxw - 120):
-        d.text((MARGIN, y), l, font=R.body(34, 500), fill=SOFT)
+    # tier ladder
+    nf = R.disp(40, 600)
+    for name, price, note in C.PRICE_TIERS:
+        d.text((MARGIN, y), name, font=R.body(34, 700), fill=PAPER)
+        R.tracked(d, W - MARGIN, y - 4, price, nf, ACC_D, anchor="ra")
         y += 48
+        for l in R.wrap(d, note, R.body(29, 500), maxw):
+            d.text((MARGIN, y), l, font=R.body(29, 500), fill=MUT_D)
+            y += 40
+        y += 30
+    # note
+    for l in R.wrap(d, C.PRICE_NOTE, R.body(30, 500), maxw):
+        d.text((MARGIN, y), l, font=R.body(30, 500), fill=SOFT)
+        y += 42
     _footer(d, dark=True, index=f"{idx:02d} — {total:02d}")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, "PNG")
