@@ -1,0 +1,181 @@
+"""Instagram Stories renderer for проЯв highlights (закріплені сторіс).
+
+Vertical 9:16 frames (1080×1920) on the same brand as the carousels — cobalt
+accent, Unbounded headlines, Manrope body, cream & coal grounds. Content lives
+in config.STORIES; this module draws the frames. Text is drawn by code (zero
+typos, exact brand colours).
+
+Layout keeps a safe zone: Instagram overlays its UI on the top ~250px and the
+bottom ~240px, so all content sits between them and reads on any phone.
+"""
+import os
+from PIL import Image, ImageDraw
+import config as C
+import render as R  # reuse the carousel drawing helpers (fonts, tokens, photo)
+
+W, H = C.STORY_SIZE            # 1080 × 1920
+MARGIN = 96
+TOP_SAFE = 300                 # IG avatar/close sit above this
+BOT_SAFE = H - 300             # IG reply bar sits below this
+
+PAPER = R.PAPER
+COAL = R.COAL
+INK = R.INK
+MUT_L = R.MUT_L
+MUT_D = R.MUT_D
+ACC = R.ACC
+ACC_D = R.ACC_D
+WHITE = R.WHITE
+SOFT = R.SOFT
+
+
+def _wordmark(d, x, y, size=30, dark=False):
+    """проЯв wordmark with the cobalt Я, top-left anchor."""
+    ink = PAPER if dark else INK
+    acc = ACC_D if dark else ACC
+    wf = R.disp(size, 600)
+    for t, col in (("про", ink), ("Я", acc), ("в", ink)):
+        d.text((x, y), t, font=wf, fill=col)
+        x += d.textlength(t, font=wf)
+    return x
+
+
+def _footer(d, dark=False, index=None):
+    """Corner meta: wordmark top-left, site bottom-left, index bottom-right."""
+    _wordmark(d, MARGIN, TOP_SAFE - 96, 30, dark)
+    mut = MUT_D if dark else MUT_L
+    acc = ACC_D if dark else ACC
+    R.tracked(d, MARGIN, BOT_SAFE + 70, C.SITE, R.body(24, 700), acc, tr=2)
+    if index:
+        R.tracked(d, W - MARGIN, BOT_SAFE + 70, index, R.body(22, 700), mut, tr=3, anchor="ra")
+
+
+def frame_cover(story, out_path):
+    """Highlight cover — giant проЯв on coal, doubles as the highlight icon."""
+    img = Image.new("RGB", (W, H), COAL)
+    d = ImageDraw.Draw(img)
+    R.tracked(d, W // 2, TOP_SAFE + 40, "УКРАЇНСЬКА ГАЛЕРЕЯ ДЛЯ ФОТОГРАФІВ",
+              R.body(22, 700), MUT_D, tr=4, anchor="ma")
+    # wordmark, centered, oversized
+    wf = R.disp(180, 700)
+    parts = (("про", PAPER), ("Я", ACC_D), ("в", PAPER))
+    tot = sum(d.textlength(t, font=wf) for t, _ in parts)
+    x = (W - tot) // 2
+    y = H // 2 - 190
+    for t, col in parts:
+        d.text((x, y), t, font=wf, fill=col)
+        x += d.textlength(t, font=wf)
+    # accent rule
+    d.rectangle([(W - 120) // 2, y + 250, (W + 120) // 2, y + 260], fill=ACC_D)
+    for i, line in enumerate(("Галерея для клієнтів", "замість архіву в Drive")):
+        R.tracked(d, W // 2, y + 300 + i * 52, line, R.body(34, 500), SOFT, anchor="ma")
+    R.tracked(d, W // 2, BOT_SAFE + 70, C.SITE, R.disp(34, 600), PAPER, anchor="ma")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG")
+    return out_path
+
+
+def frame_feature(story, fr, idx, total, out_path):
+    """Paper feature frame: eyebrow pill, accented headline, body, rule."""
+    img = Image.new("RGB", (W, H), PAPER)
+    d = ImageDraw.Draw(img)
+    maxw = W - MARGIN * 2
+    # eyebrow pill
+    label = f"{fr.get('kick', 'ФУНКЦІЯ')} · {idx:02d}"
+    R.tracked(d, MARGIN, TOP_SAFE + 30, "", R.body(1, 700), INK)  # noop keep spacing
+    R._pill(d, MARGIN, TOP_SAFE + 20, label, R.body(22, 700), ACC, WHITE, tr=2)
+    # headline (accent word in cobalt)
+    hf, hlines = R._fit_tokens(d, R._tokens(fr["head"]), maxw, start=104, min_size=58, max_lines=4)
+    hlh = int(hf.size * 1.06)
+    y = TOP_SAFE + 150
+    y = R._draw_tokens(d, MARGIN, y, hlines, hf, INK, ACC, hlh)
+    # rule
+    y += 24
+    d.rectangle([MARGIN, y, MARGIN + 100, y + 8], fill=ACC)
+    y += 54
+    # body
+    bf = R.body(40, 500)
+    for l in R.wrap(d, fr["body"], bf, maxw):
+        d.text((MARGIN, y), l, font=bf, fill=MUT_L)
+        y += int(bf.size * 1.42)
+    _footer(d, dark=False, index=f"{idx:02d} — {total:02d}")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG")
+    return out_path
+
+
+def frame_price(story, idx, total, out_path):
+    """Coal price frame — the offer, big and clean."""
+    img = Image.new("RGB", (W, H), COAL)
+    d = ImageDraw.Draw(img)
+    maxw = W - MARGIN * 2
+    R._pill(d, MARGIN, TOP_SAFE + 20, C.PRICE_EYEBROW, R.body(22, 700), ACC_D, COAL, tr=3)
+    y = TOP_SAFE + 150
+    d.text((MARGIN, y), C.PRICE_FREE, font=R.disp(64, 600), fill=PAPER)
+    y += 150
+    R.tracked(d, MARGIN, y, "далі", R.body(30, 600), MUT_D, tr=2)
+    y += 66
+    # big number
+    d.text((MARGIN, y), C.PRICE_MAIN, font=R.disp(150, 700), fill=PAPER)
+    y += 190
+    d.text((MARGIN, y), C.PRICE_SUB, font=R.disp(60, 600), fill=ACC_D)
+    y += 96
+    d.rectangle([MARGIN, y, MARGIN + 100, y + 8], fill=ACC_D)
+    y += 44
+    for l in R.wrap(d, C.PRICE_NOTE, R.body(34, 500), maxw - 120):
+        d.text((MARGIN, y), l, font=R.body(34, 500), fill=SOFT)
+        y += 48
+    _footer(d, dark=True, index=f"{idx:02d} — {total:02d}")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG")
+    return out_path
+
+
+def frame_cta(story, idx, total, out_path):
+    """Closing frame — one clear action."""
+    img = Image.new("RGB", (W, H), COAL)
+    d = ImageDraw.Draw(img)
+    maxw = W - MARGIN * 2
+    R._pill(d, MARGIN, TOP_SAFE + 20, "СПРОБУЙ БЕЗКОШТОВНО", R.body(22, 700), ACC_D, COAL, tr=2)
+    y = H // 2 - 240
+    for l in ("Створи галерею,", "яку клієнт", "захоче показати"):
+        d.text((MARGIN, y), l, font=R.disp(78, 600), fill=PAPER)
+        y += 96
+    y += 30
+    d.rectangle([MARGIN, y, MARGIN + 120, y + 9], fill=ACC_D)
+    y += 60
+    R.tracked(d, MARGIN, y, C.SITE, R.disp(60, 600), PAPER, tr=1)
+    y += 84
+    R.tracked(d, MARGIN, y, "Посилання в шапці профілю", R.body(32, 500), MUT_D)
+    _footer(d, dark=True, index=f"{idx:02d} — {total:02d}")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    img.save(out_path, "PNG")
+    return out_path
+
+
+def highlight(story, out_dir):
+    """Render every frame of one highlight; returns the ordered paths."""
+    os.makedirs(out_dir, exist_ok=True)
+    frames = story["frames"]
+    total = len(frames)
+    paths = []
+    for i, fr in enumerate(frames):
+        p = os.path.join(out_dir, f"{i:02d}_{fr['type']}.png")
+        t = fr["type"]
+        if t == "cover":
+            frame_cover(story, p)
+        elif t == "price":
+            frame_price(story, i, total, p)
+        elif t == "cta":
+            frame_cta(story, i, total, p)
+        else:
+            frame_feature(story, fr, i, total, p)
+        paths.append(p)
+    return paths
+
+
+if __name__ == "__main__":
+    for st in C.STORIES:
+        out = os.path.join("output", "stories", st["id"])
+        made = highlight(st, out)
+        print(f"{st['id']}: {len(made)} frames -> {out}")

@@ -152,6 +152,53 @@ CAROUSELS = [
 CAPTION_FOOTER = "\n\n—\n{brand} · українська галерея для фотографів"
 
 
+# --- Instagram Stories highlights (stories.py) -----------------------------
+# Vertical 9:16 frames meant to be saved as a profile "highlight" (закріплені
+# сторіс). Same brand as the carousels. Each highlight: cover + feature frames
+# + price + CTA. Headlines accent a *word* in cobalt, just like carousels.
+STORY_SIZE = (1080, 1920)
+
+STORIES = [
+    {
+        "id": "HL_GALEREYA",
+        "title": "проЯв — галерея",          # highlight name (шапка)
+        "frames": [
+            {"type": "cover"},
+            {"type": "feature", "kick": "ЩО ЦЕ",
+             "head": "Онлайн-галерея *замість* архіву в Drive",
+             "body": "Клієнт відкриває красиву сторінку з обкладинкою на весь екран — а не список файлів."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "*Дизайн-студія*",
+             "body": "Обери тему, шрифт, обкладинку й розкладку. Галерея виглядає у твоєму стилі, а не шаблонно."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "Клієнт *обирає* улюблені",
+             "body": "Відбір фото в один тап. Клієнт позначає найкраще для друку та Instagram — ти економиш години."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "*Завантаження* у повному розмірі",
+             "body": "Клієнт качає фото коли зручно, у потрібному розмірі — без zip і згаслих посилань."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "*Паролі* та приватність",
+             "body": "Галерея відкривається лише тому, кому ти дозволиш. Приватні зйомки лишаються приватними."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "Твій *бренд*",
+             "body": "Твоє ім'я, кольори й домен. Клієнт бачить тебе, а не логотип Google."},
+            {"type": "feature", "kick": "ФУНКЦІЯ",
+             "head": "*Бронювання* зйомок",
+             "body": "Приймай заявки на зйомку прямо в проЯв — усе в одному місці."},
+            {"type": "price"},
+            {"type": "cta"},
+        ],
+    },
+]
+
+# Highlight price frame copy (single source of truth).
+PRICE_EYEBROW = "ЦІНА"
+PRICE_FREE    = "Старт — безкоштовно"
+PRICE_MAIN    = "100 ГБ"
+PRICE_SUB     = "79 грн / місяць"
+PRICE_NOTE    = "Без прихованих платежів. Рости, коли готова."
+
+
 # --- Gemini photo prompts (generate_photos.py) -----------------------------
 # Only the *photographic* slides — UI screens are made with headless Chromium.
 # Filename must match the *_photo fields / slide "photo" used above.
